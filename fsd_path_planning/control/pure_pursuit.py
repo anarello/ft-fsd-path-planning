@@ -1,9 +1,9 @@
 """
-Controlador Pure Pursuit para seguir la trayectoria de PathPlanner.
+Pure Pursuit controller for following a PathPlanner trajectory.
 
-La trayectoria de entrada es la salida de
-`PathPlanner.calculate_path_in_global_frame`: un arreglo Mx4 con
-[s (m), x, y, curvatura]. Se asume que la posición del vehículo es el eje trasero.
+The input trajectory is the output of
+`PathPlanner.calculate_path_in_global_frame`: an Mx4 array containing
+[s (m), x, y, curvature]. The vehicle's position is assumed to be at the rear axle.
 """
 
 from __future__ import annotations
@@ -23,10 +23,10 @@ class PurePursuitConfig:
     max_steer_rate: float = np.deg2rad(180)  # rad/s, suaviza el volante
     v_max: float = 8.0  # m/s, conservador para la vuelta de exploración
     v_min: float = 2.0  # m/s
-    a_lat_max: float = 6.0  # m/s^2, define la velocidad en curvas
-    a_long_max: float = 3.0  # m/s^2 (aceleración)
-    a_brake_max: float = 6.0  # m/s^2 (frenado)
-    speed_kp: float = 1.5  # ganancia del control de velocidad
+    a_lat_max: float = 6.0  # m/s^2, defines the maximum lateral acceleration
+    a_long_max: float = 3.0  # m/s^2 (acceleration)
+    a_brake_max: float = 6.0  # m/s^2 (braking)
+    speed_kp: float = 1.5  # speed control gain
 
 
 @dataclass
@@ -43,7 +43,7 @@ class PurePursuitController:
         self.cfg = config or PurePursuitConfig()
         self._last_steer = 0.0
 
-    # ---------- geometría ----------
+    # Geometry: lookahead and target point
     def lookahead_distance(self, speed: float) -> float:
         ld = self.cfg.lookahead_gain * speed + self.cfg.lookahead_min
         return float(np.clip(ld, self.cfg.lookahead_min, self.cfg.lookahead_max))
@@ -78,10 +78,9 @@ class PurePursuitController:
         t = (lookahead - d_a) / (d_b - d_a + 1e-9)
         return forward[j - 1] + t * (forward[j] - forward[j - 1])
 
-    # ---------- velocidad ----------
+    # speed control: target speed based on curvature and braking distance
     def target_speed(self, path: np.ndarray, position: np.ndarray, speed: float) -> float:
-        """Velocidad límite por curvatura en el horizonte que el auto alcanzará
-        a frenar: v = sqrt(a_lat / |k|)."""
+        """Target speed based on curvature and braking distance."""
         path_xy, curvature = path[:, 1:3], np.abs(path[:, 3])
         dists = np.linalg.norm(path_xy - position, axis=1)
         braking_distance = speed**2 / (2 * self.cfg.a_brake_max) + 2.0

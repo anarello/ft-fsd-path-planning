@@ -28,7 +28,7 @@ DEMO_DIR = Path(__file__).parent
 
 
 def load_ground_truth_map(track_file: Path):
-    """Usa el último frame del JSON (mapa SLAM completo) como pista real."""
+    """Uses the last entry of the JSON file to get the true cone positions, and the first entry to get the starting position and direction."""
     data = json.loads(track_file.read_text())
     last = data[-1]
     cones = [np.array(c, dtype=float).reshape(-1, 2) for c in last["slam_cones"]]
@@ -38,8 +38,8 @@ def load_ground_truth_map(track_file: Path):
 
 
 class ConeSensor:
-    """Sensor simulado: ve conos dentro de un alcance y campo de visión.
-    Acumula lo visto en un 'mapa SLAM' (SLAM perfecto + ruido opcional)."""
+    """Simulated sensor that sees cones within a certain range and field of view, with optional noise.
+    Accumulates what has been seen in a 'SLAM map' (perfect SLAM + optional noise)."""
 
     def __init__(self, true_cones, sensor_range=12.0, fov_deg=140.0, noise_std=0.0,
                  remove_color=False, seed=0):
@@ -49,7 +49,7 @@ class ConeSensor:
         self.noise_std = noise_std
         self.remove_color = remove_color
         self.rng = np.random.default_rng(seed)
-        # mapa: por tipo, índices ya descubiertos y su posición estimada
+        # map: by cone type, indices already seen and their estimated position
         self.seen = [dict() for _ in ConeTypes]
 
     def observe(self, position, yaw):
@@ -102,7 +102,7 @@ def run(track_file: Path, laps: int, sensor_range: float, noise: float, remove_c
             t0 = time.perf_counter()
             try:
                 path = planner.calculate_path_in_global_frame(sensor.slam_map(), car.position, car.direction)
-            except Exception as e:  # el planificador puede fallar; seguimos con la última ruta
+            except Exception as e:  # the planner can fail; we continue with the last path
                 failures += 1
                 if path is None:
                     raise RuntimeError(f"El planificador falló al inicio: {e}") from e
@@ -120,7 +120,7 @@ def run(track_file: Path, laps: int, sensor_range: float, noise: float, remove_c
         log["steer"].append(out.steer)
         log["target"].append(out.target_point)
 
-        # conteo de vueltas: salir de la zona de salida y regresar
+        # Counter of laps: going out of the start zone and returning
         d_start = np.linalg.norm(car.position - start_pos)
         if d_start > 15:
             left_start = True
@@ -132,7 +132,7 @@ def run(track_file: Path, laps: int, sensor_range: float, noise: float, remove_c
                 break
 
     xy = np.array(log["xy"])
-    # holgura: distancia del eje trasero al cono más cercano en cada paso
+    # clearance: distance from the rear axle to the nearest cone at each step
     clearance = np.min(np.linalg.norm(xy[:, None, :] - all_true[None], axis=2), axis=1)
     results = {
         "laps": lap_count,
