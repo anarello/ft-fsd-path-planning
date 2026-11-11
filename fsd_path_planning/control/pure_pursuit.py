@@ -89,13 +89,13 @@ class PurePursuitController:
         v_curve = np.sqrt(self.cfg.a_lat_max / max(k_max, 1e-3))
         return float(np.clip(v_curve, self.cfg.v_min, self.cfg.v_max))
 
-    # ---------- ley de control ----------
+    # control law
     def compute(self, path: np.ndarray, position: np.ndarray, yaw: float, speed: float, dt: float) -> ControlOutput:
         path_xy = path[:, 1:3]
         ld = self.lookahead_distance(speed)
         target = self.find_target_point(path_xy, position, ld)
 
-        # objetivo en el marco del vehículo
+        # objective in local frame
         dx, dy = target - position
         x_local = np.cos(yaw) * dx + np.sin(yaw) * dy
         y_local = -np.sin(yaw) * dx + np.cos(yaw) * dy
@@ -106,7 +106,7 @@ class PurePursuitController:
         steer = np.arctan2(2.0 * self.cfg.wheelbase * np.sin(alpha), ld_real)
         steer = float(np.clip(steer, -self.cfg.max_steer, self.cfg.max_steer))
 
-        # límite de velocidad de giro del volante
+        # limit of velocity of steering wheel|
         max_delta = self.cfg.max_steer_rate * dt
         steer = float(np.clip(steer, self._last_steer - max_delta, self._last_steer + max_delta))
         self._last_steer = steer
@@ -119,7 +119,7 @@ class PurePursuitController:
 
 
 class KinematicBicycle:
-    """Modelo cinemático de bicicleta (posición en el eje trasero)."""
+    """Classic kinematic bicycle model for simulating vehicle motion. The vehicle's position is assumed to be at the rear axle."""
 
     def __init__(self, x: float, y: float, yaw: float, v: float = 0.0, wheelbase: float = 1.53):
         self.x, self.y, self.yaw, self.v, self.L = x, y, yaw, v, wheelbase

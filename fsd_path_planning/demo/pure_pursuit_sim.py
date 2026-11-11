@@ -83,7 +83,7 @@ def run(track_file: Path, laps: int, sensor_range: float, noise: float, remove_c
     true_cones, start_pos, start_dir = load_ground_truth_map(track_file)
     all_true = np.vstack([c for c in true_cones if len(c)])
 
-    car = KinematicBicycle(*start_pos, np.arctan2(start_dir[1], start_dir[0]), v=0.0,
+    car = KinematicBicycle(*start_pos, np.arctan2(start_dir[1], start_dir[0]), v=0.0, # type: ignore
                            wheelbase=cfg.wheelbase)
     sensor = ConeSensor(true_cones, sensor_range, noise_std=noise, remove_color=remove_color)
     planner = PathPlanner(MissionTypes.trackdrive)
@@ -105,7 +105,7 @@ def run(track_file: Path, laps: int, sensor_range: float, noise: float, remove_c
             except Exception as e:  # the planner can fail; we continue with the last path
                 failures += 1
                 if path is None:
-                    raise RuntimeError(f"El planificador falló al inicio: {e}") from e
+                    raise RuntimeError(f"The planner failed at the beginning: {e}") from e
             planner_times.append(time.perf_counter() - t0)
             log["paths"].append(path[:, 1:3].copy())
             log["seen"].append(sensor.slam_map())
@@ -167,9 +167,9 @@ def plot(log, true_cones, clearance, out_png: Path):
         ax.scatter(*xy[tight].T, c="red", s=10, zorder=4, label="holgura < 0.6 m")
         ax.legend()
     ax.set_aspect("equal")
-    ax.set_title("Vuelta de exploración: PathPlanner + Pure Pursuit")
+    ax.set_title("Exploration : PathPlanner + Pure Pursuit")
     fig.savefig(out_png, dpi=130, bbox_inches="tight")
-    print(f"Gráfica guardada en {out_png}")
+    print(f"Graph saved in {out_png}")
 
 
 def animate(log, true_cones, out_gif: Path, every: int = 2):
@@ -209,14 +209,14 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--track", type=Path, default=DEMO_DIR / "fsg_19_2_laps.json")
     p.add_argument("--laps", type=int, default=1)
-    p.add_argument("--range", type=float, default=12.0, help="alcance del sensor (m)")
-    p.add_argument("--noise", type=float, default=0.0, help="ruido de posición de conos (m)")
-    p.add_argument("--no-color", action="store_true", help="probar el modo sin color")
+    p.add_argument("--range", type=float, default=12.0, help="range of the sensor (m)")
+    p.add_argument("--noise", type=float, default=0.0, help="noise of the cone positions (m)")
+    p.add_argument("--no-color", action="store_true", help="test the colorless mode")
     p.add_argument("--v-max", type=float, default=8.0)
     p.add_argument("--lookahead-gain", type=float, default=0.35)
     p.add_argument("--lookahead-min", type=float, default=3.0)
-    p.add_argument("--dt", type=float, default=0.05, help="periodo de control (s)")
-    p.add_argument("--planner-period", type=float, default=0.1, help="periodo del planificador (s)")
+    p.add_argument("--dt", type=float, default=0.05, help="period of control (s)")
+    p.add_argument("--planner-period", type=float, default=0.1, help="period of the planner (s)")
     p.add_argument("--max-time", type=float, default=150.0)
     p.add_argument("--out", type=Path, default=Path("pure_pursuit_result.png"))
     p.add_argument("--gif", action="store_true")
@@ -225,7 +225,7 @@ def main():
     cfg = PurePursuitConfig(v_max=a.v_max, lookahead_gain=a.lookahead_gain, lookahead_min=a.lookahead_min)
     results, log, true_cones, clearance = run(a.track, a.laps, a.range, a.noise, a.no_color,
                                               a.dt, a.planner_period, a.max_time, cfg)
-    print("\nResultados:")
+    print("\nResults:")
     for k, v in results.items():
         print(f"  {k:18s} {v:.2f}" if isinstance(v, float) else f"  {k:18s} {v}")
     plot(log, true_cones, clearance, a.out)
