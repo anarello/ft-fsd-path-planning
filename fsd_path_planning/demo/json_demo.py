@@ -79,10 +79,9 @@ def main(
     if not numba_cache_files_exist():
         print(
             """
-It looks like this is the first time you are running this demo. It will take around a 
-minute to compile the numba functions. If you want to estimate the runtime of the
-planner, you should run the demo one more time after it is finished.
-"""
+    Waiting for numba cache files to be generated. This may take a few seconds, but it will only happen once.
+    If you want to skip this step, you can run the demo with the --experimental-performance-improvements flag, which will use a different implementation of the path planner that does not require numba cache
+    """
         )
 
     # run planner once to "warm up" the JIT compiler / load all cached jit functions
